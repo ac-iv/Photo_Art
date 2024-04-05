@@ -15,17 +15,18 @@
         <a href="index.html"><img src="Img/FUNNYCATSGIF.gif" alt=""></a>
     </header>
     
-        <select id="elStyle">
-            <option>original</option>
-            <option selected="selected">char</option>
-            <option>dots</option>
-            <option>emoji</option>
-            <option>line</option>
-        </select>
-        <input type="range" id="elKernel" min="1" max="100" value="5">
-        <input type="file" id="elImageInput" accept="image/*">
-        <button id="downloadPNG">Download as PNG</button>
-    </h1>
+    <select id="elStyle">
+        <option>original</option>
+        <option selected="selected">char</option>
+        <option>dots</option>
+        <option>emoji</option>
+        <option>line</option>
+    </select>
+    <input type="range" id="elKernel" min="1" max="100" value="5">
+    <input type="file" id="elImageInput" accept="image/*">
+    <button id="downloadPNG">Download as PNG</button>
+    <button id="downloadSVG">Download as SVG</button>
+
     <div class="frame" id="elFrame"><img id="elImg" /></div>
     
     </footer>
@@ -384,8 +385,32 @@
         const canvas = document.getElementById('elFrame').querySelector('canvas');
         const link = document.createElement('a');
         link.download = 'artwork.svg';
-        link.href = 'data:image/svg+xml,' + encodeURIComponent(canvas.toSVG());
+        const svgData = canvas.toDataURL("image/svg+xml");
+
+        const canvasWidth = canvas.width;
+        const canvasHeight = canvas.height;
+
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", canvasWidth);
+        svg.setAttribute("height", canvasHeight);
+
+        const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+        img.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", svgData);
+        img.setAttribute("width", canvasWidth);
+        img.setAttribute("height", canvasHeight);
+
+        svg.appendChild(img);
+
+        const serializer = new XMLSerializer();
+        const svgString = serializer.serializeToString(svg);
+        
+        const svgBlob = new Blob([svgString], { type: "image/svg+xml" });
+        const svgUrl = URL.createObjectURL(svgBlob);
+        
+        link.href = svgUrl;
         link.click();
+        
+        URL.revokeObjectURL(svgUrl);
     });
 </script>
 

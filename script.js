@@ -354,4 +354,46 @@
         link.href = 'data:image/svg+xml,' + encodeURIComponent(canvas.toSVG());
         link.click();
     });
+
+// Function to download canvas as SVG
+document.getElementById('downloadSVG').addEventListener('click', function () {
+    const canvas = document.getElementById('elFrame').querySelector('canvas');
+    const link = document.createElement('a');
+    link.download = 'artwork.svg';
+    link.href = 'data:image/svg+xml,' + encodeURIComponent(convertCanvasToSVG(canvas));
+    link.click();
+});
+
+// Function to convert canvas to SVG
+function convertCanvasToSVG(canvas) {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", canvas.width);
+    svg.setAttribute("height", canvas.height);
+
+    const canvasCtx = canvas.getContext("2d");
+    const imageData = canvasCtx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+            const index = (y * canvas.width + x) * 4;
+            const r = imageData.data[index];
+            const g = imageData.data[index + 1];
+            const b = imageData.data[index + 2];
+            const a = imageData.data[index + 3];
+
+            if (a > 0) {
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", x);
+                rect.setAttribute("y", y);
+                rect.setAttribute("width", 1);
+                rect.setAttribute("height", 1);
+                rect.setAttribute("fill", `rgb(${r},${g},${b})`);
+                svg.appendChild(rect);
+            }
+        }
+    }
+
+    return svg.outerHTML;
+}
+
 </script>
