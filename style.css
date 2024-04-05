@@ -1,0 +1,67 @@
+.catart-page {
+    background-color: #FFFFF1;
+    align-items: center;
+    text-align: center;
+}
+  
+.catart-page h1 {}
+
+.catart-page select, .catart-page input[type="text"] {
+    margin-bottom: 0.5em;
+    border: 2px solid #ff0000;
+    background-color: #FFFFF1;
+    font-family: 'Comic Sans MS', cursive, sans-serif;
+}
+  
+.catart-page input[type="file"] {
+    background-color: #FFFFF1;
+    color: black;
+    border: 2px solid #ff0000;
+    font-family: 'Times New Roman', Times, serif;
+}
+  
+.catart-page .frame {
+    position: relative;
+    width: 90vw;
+    height: 90vh;
+    background-color: #FFFFF1;
+    margin-top: 20px;
+    text-align: center;
+    padding-left: 8%;
+}
+  
+.catart-page .frame canvas, .frame img {
+    object-fit: contain;
+    width: 90%;
+    height: 90%;
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    border: 2px solid #ff0000;
+    background-color: #FFFFF1;
+}
+  
+.catart-page h1 {
+    text-align: center;
+    margin: 0;
+    padding: 10px;
+}
+  
+.catart-page .header {
+    background-color: #FFFFF1;
+    border: 2px solid #ff0000;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+  
+.catart-page .header h1 {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+    padding: 0;
+    color: #FFFFF1;
+}
