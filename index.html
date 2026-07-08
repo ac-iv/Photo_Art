@@ -11,6 +11,36 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* Clean layouts for the new dual-source photo controls */
+        .photo-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .url-input-group {
+            display: flex;
+            gap: 4px;
+        }
+        .url-input-group input[type="text"] {
+            flex: 1;
+            padding: 4px 8px;
+            font-family: 'IBM Plex Mono', monospace;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .url-input-group button {
+            padding: 4px 12px;
+            font-family: 'IBM Plex Mono', monospace;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .url-input-group button:hover {
+            background-color: #e0e0e0;
+        }
+    </style>
 </head>
 
 <body class="catart-page">
@@ -35,10 +65,16 @@
             <input type="range" id="elKernel" min="1" max="100" value="5">
         </div>
 
-        <div class="control">
-            <label for="elImageInput">photo</label>
-            <input type="file" id="elImageInput" accept="image/*">
-            <label for="elImageInput" class="file-btn" id="fileBtn">choose a photo</label>
+        <div class="control photo-controls">
+            <label>photo source</label>
+            <div>
+                <input type="file" id="elImageInput" accept="image/*">
+                <label for="elImageInput" class="file-btn" id="fileBtn">choose a photo</label>
+            </div>
+            <div class="url-input-group">
+                <input type="text" id="elUrlInput" placeholder="or paste image URL...">
+                <button id="elUrlBtn">go</button>
+            </div>
         </div>
 
         <div class="control">
@@ -55,57 +91,33 @@
     <script>
         const FPS = 60;
         const DPF = 512; // dots per frame
-
+        
         const drawFnHash = {};
-
-        drawFnHash.emoji = function ({
-            ctx,
-            cx,
-            cy,
-            s,
-            kernel
-        }) {
+        
+        drawFnHash.emoji = function ({ ctx, cx, cy, s, kernel }) {
             const r = (kernel) * (1 - s);
             const ch = "🐱";
             ctx.font = `${r}px monospace`;
             ctx.fillText(ch, cx - kernel / 2, cy + kernel / 2);
         }
-
-        drawFnHash.char = function ({
-            ctx,
-            cx,
-            cy,
-            s,
-            kernel
-        }) {
+        
+        drawFnHash.char = function ({ ctx, cx, cy, s, kernel }) {
             const base = kernel * 2;
             const fontsize = base * (1 - s);
             const ch = String.fromCodePoint(65 + Math.random() * 26 | 0);
             ctx.font = `${fontsize}px monospace`;
             ctx.fillText(ch, cx - (fontsize * 0.8) / 2, cy + fontsize / 2);
         }
-
-        drawFnHash.dots = function ({
-            ctx,
-            cx,
-            cy,
-            s,
-            kernel
-        }) {
+        
+        drawFnHash.dots = function ({ ctx, cx, cy, s, kernel }) {
             const r = (kernel / 2) * (1 - s); // no overlap
             ctx.beginPath();
             ctx.ellipse(cx, cy, r, r, 0, 0, 2 * Math.PI)
             ctx.fill();
             ctx.closePath();
         };
-
-        drawFnHash.line = function ({
-            ctx,
-            cx,
-            cy,
-            s,
-            kernel
-        }) {
+        
+        drawFnHash.line = function ({ ctx, cx, cy, s, kernel }) {
             const r = (kernel / 2) * (1 - s);
             ctx.beginPath();
             ctx.moveTo(cx - kernel / 2, cy - kernel / 2);
@@ -114,55 +126,123 @@
             ctx.stroke();
             ctx.closePath();
         }
-
+        
         const elImageInput = document.getElementById('elImageInput');
+        const elUrlInput = document.getElementById('elUrlInput');
+        const elUrlBtn = document.getElementById('elUrlBtn');
         const elImg = document.getElementById('elImg');
         const elFrame = document.getElementById('elFrame');
-
+        
+        // Handle Local File Uploads
         elImageInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
+            if (!file) return;
+        
             const reader = new FileReader();
-
-            // show the chosen file name on the button
             const fileBtn = document.getElementById('fileBtn');
-            if (file && fileBtn) fileBtn.textContent = file.name.toLowerCase();
-
+            if (fileBtn) fileBtn.textContent = file.name.toLowerCase();
+            
+            elUrlInput.value = '';
+        
             reader.onload = function (event) {
+                elImg.removeAttribute('crossOrigin'); 
                 elImg.src = event.target.result;
                 applyEffects(elImg);
             };
-
+        
             reader.readAsDataURL(file);
         });
-
+        
+        // Trigger mechanism for URL image loading
+        function loadUrlImage() {
+            const url = elUrlInput.value.trim();
+            if (url) {
+                const fileBtn = document.getElementById('fileBtn');
+                if (fileBtn) fileBtn.textContent = "choose a photo";
+                elImageInput.value = ''; 
+        
+                // Load base64 or blob natively
+                if (url.startsWith('data:') || url.startsWith('blob:')) {
+                    elImg.removeAttribute('crossOrigin');
+                    elImg.src = url;
+                    applyEffects(elImg);
+                    return;
+                }
+        
+                // Convert remote web URLs to safe Local Base64 blobs to preserve reactivity
+                fetch(url)
+                    .then(response => {
+                        if (!response.ok) throw new Error('Network response error.');
+                        return response.blob();
+                    })
+                    .then(blob => {
+                        const reader = new FileReader();
+                        reader.onloadend = function () {
+                            elImg.removeAttribute('crossOrigin');
+                            elImg.src = reader.result;
+                            applyEffects(elImg);
+                        };
+                        reader.readAsDataURL(blob);
+                    })
+                    .catch(err => {
+                        console.warn("Direct fetch restricted by CORS. Attempting crossOrigin element fallback...", err);
+                        
+                        // Fallback option: element-level assignment
+                        elImg.crossOrigin = "Anonymous";
+                        elImg.src = url;
+                        
+                        elImg.onload = function() {
+                            applyEffects(elImg);
+                            elImg.onload = null;
+                        };
+                        elImg.onerror = function() {
+                            alert("Unable to process this image URL due to strict hosting security (CORS restrictions). Try uploading a downloaded version instead!");
+                            onError(err);
+                        };
+                    });
+            }
+        }
+        
+        elUrlBtn.addEventListener('click', loadUrlImage);
+        elUrlInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                loadUrlImage();
+            }
+        });
+        
         const elStyle = document.getElementById('elStyle');
         const elKernel = document.getElementById('elKernel');
         const elKernelValue = document.getElementById('kernelValue');
-
+        
         elStyle.addEventListener("input", onInput);
         elKernel.addEventListener("input", onInput);
         onInput();
-
+        
         function onInput() {
             if (elKernelValue) elKernelValue.textContent = elKernel.value;
-
+        
             const index = elStyle.selectedIndex;
             const imgsrc = elImg.src;
             const oldCanvas = elFrame.querySelector("canvas");
-
+        
             if (oldCanvas != null)
                 elFrame.removeChild(oldCanvas);
-
+        
             if (index === 0) {
                 elImg.classList.add("show");
                 return;
             }
-
+        
+            if (!imgsrc || imgsrc === window.location.href) {
+                return;
+            }
+        
             const drawFn = drawFnHash[elStyle.children[index].value];
             const kernel = Number(elKernel.value);
             const frameEl = elFrame;
             elImg.classList.remove("show");
-
+        
             fx({
                     frameEl,
                     drawFn,
@@ -172,21 +252,23 @@
                 .then(onDone)
                 .catch(onError);
         }
-
+        
         function applyEffects(image) {
             const elStyle = document.getElementById('elStyle');
             const elKernel = document.getElementById('elKernel');
             const index = elStyle.selectedIndex;
             const imgsrc = image.src;
-
+        
             if (index === 0) {
+                elImg.classList.add("show");
                 return;
             }
-
+        
             const drawFn = drawFnHash[elStyle.children[index].value];
             const kernel = Number(elKernel.value);
             const frameEl = elFrame;
-
+            elImg.classList.remove("show");
+        
             fx({
                     frameEl,
                     drawFn,
@@ -196,182 +278,126 @@
                 .then(onDone)
                 .catch(onError);
         }
-
-        function onDone({
-            onCanvas
-        }) {
+        
+        function onDone({ onCanvas }) {
             enableAllControls();
         }
-
+        
         function onError(err) {
-            console.error(err);
+            console.error("Halftone Error Log:", err);
             for (const optionEl of Array.from(elStyle.children))
                 optionEl.selected = false;
-            elStyle.children[0].selected = true; // original
+            elStyle.children[0].selected = true; // revert
+            elImg.classList.add("show"); 
             enableAllControls();
         }
-
+        
         function enableAllControls() {
             elStyle.disabled = false;
             elKernel.disabled = false;
         }
-
+        
         function disableAllControls() {
             elStyle.disabled = true;
             elKernel.disabled = true;
         }
-
-        function fx({
-            frameEl,
-            drawFn,
-            kernel,
-            imgsrc
-        }) {
+        
+        function fx({ frameEl, drawFn, kernel, imgsrc }) {
             const el = frameEl.querySelector("img");
             return Promise.resolve(imgsrc)
                 .then(toImage())
-                .then(setup({
-                    el
-                }))
-                .then(halftone({
-                    kernel
-                }))
+                .then(setup({ el }))
+                .then(halftone({ kernel }))
                 .then(render({
                     dotsPerFrame: DPF,
                     fps: FPS,
                     drawFn
                 }));
         }
-
+        
         function toImage() {
             return function (url) {
                 return new Promise(function (resolve, reject) {
                     const image = new Image();
+                    if (elImg.crossOrigin) {
+                        image.crossOrigin = elImg.crossOrigin;
+                    }
                     image.addEventListener("load", e => resolve(image));
                     image.addEventListener("error", e => reject(e));
                     image.src = url;
                 });
             }
         }
-
-        function halftone({
-            kernel = 10
-        }) {
-            function grayscale({
-                r,
-                g,
-                b
-            }) {
+        
+        function halftone({ kernel = 10 }) {
+            function grayscale({ r, g, b }) {
                 return 0.2 * r / 255 + 0.7 * g / 255 + 0.1 * b / 255;
             }
-
-            function samplize({
-                x,
-                y,
-                imageData
-            }) {
-                const {
-                    width,
-                    height,
-                    data
-                } = imageData;
+        
+            function samplize({ x, y, imageData }) {
+                const { width, height, data } = imageData;
                 const samples = [];
                 for (let i = y; i < y + kernel; i++) {
                     for (let j = x; j < x + kernel; j++) {
+                        if (i >= height || j >= width) continue; 
                         const at = (i * width + j) * 4;
                         const r = data[at];
                         const g = data[at + 1];
                         const b = data[at + 2];
-                        samples.push({
-                            r,
-                            g,
-                            b
-                        });
+                        samples.push({ r, g, b });
                     }
                 }
                 let sum = 0;
                 for (const sample of samples)
                     sum += grayscale(sample);
-                return sum / samples.length; // avg
+                return samples.length ? (sum / samples.length) : 1; 
             }
-
-            return function ({
-                onCanvas,
-                imageData
-            }) {
+        
+            return function ({ onCanvas, imageData }) {
                 const halftoneData = {
                     kernel: kernel,
                     width: imageData.width / kernel | 0,
                     height: imageData.height / kernel | 0,
                     data: []
                 };
-
+        
                 for (let y = 0; y <= imageData.height - kernel; y += kernel) {
                     for (let x = 0; x <= imageData.width - kernel; x += kernel) {
-                        halftoneData.data.push(samplize({
-                            x,
-                            y,
-                            imageData
-                        }));
+                        halftoneData.data.push(samplize({ x, y, imageData }));
                     }
                 }
-
-                return {
-                    halftoneData,
-                    onCanvas
-                };
+        
+                return { halftoneData, onCanvas };
             };
         }
-
-        function render({
-            dotsPerFrame = 1,
-            fps = 10,
-            drawFn
-        }) {
-            return function ({
-                halftoneData,
-                onCanvas
-            }) {
+        
+        function render({ dotsPerFrame = 1, fps = 10, drawFn }) {
+            return function ({ halftoneData, onCanvas }) {
                 return new Promise((resolve, reject) => {
                     const ctx = onCanvas.getContext("2d");
-                    const {
-                        width,
-                        height,
-                        kernel,
-                        data
-                    } = halftoneData;
+                    const { width, height, kernel, data } = halftoneData;
                     const dotsCount = width * height;
-
+        
                     let dotsDrawn = 0;
                     (function tick() {
                         for (let i = 0; i < dotsPerFrame && dotsDrawn < dotsCount; i++) {
                             const cx = (dotsDrawn % width) * kernel + kernel / 2;
                             const cy = (dotsDrawn / width | 0) * kernel + kernel / 2;
                             const s = data[dotsDrawn];
-                            drawFn({
-                                ctx,
-                                cx,
-                                cy,
-                                s,
-                                kernel
-                            });
+                            drawFn({ ctx, cx, cy, s, kernel });
                             dotsDrawn += 1;
                         }
-
+        
                         if (dotsDrawn < dotsCount)
                             setTimeout(tick, 1000 / fps);
                         else
-                            resolve({
-                                onCanvas
-                            });
+                            resolve({ onCanvas });
                     }());
                 });
             }
         }
-
-        function setup({
-            el
-        }) {
+        
+        function setup({ el }) {
             return function (image) {
                 const onCanvas = document.createElement("canvas");
                 onCanvas.width = image.width;
@@ -380,61 +406,63 @@
                 onContext.fillStyle = "white";
                 onContext.fillRect(0, 0, onCanvas.width, onCanvas.height);
                 onContext.fillStyle = "black";
+                
+                const existingCanvas = el.parentNode.querySelector("canvas");
+                if (existingCanvas) existingCanvas.remove();
+        
                 el.parentNode.appendChild(onCanvas);
-
+        
                 const offCanvas = document.createElement("canvas");
                 offCanvas.width = onCanvas.width;
                 offCanvas.height = onCanvas.height;
                 const offContext = offCanvas.getContext("2d");
                 offContext.drawImage(image, 0, 0, offCanvas.width, offCanvas.height);
                 const imageData = offContext.getImageData(0, 0, offCanvas.width, offCanvas.height);
-
-                return {
-                    onCanvas,
-                    imageData
-                };
+        
+                return { onCanvas, imageData };
             }
         }
-
-        // Function to download canvas as PNG
+        
+        // Download controls
         document.getElementById('downloadPNG').addEventListener('click', function () {
             const canvas = document.getElementById('elFrame').querySelector('canvas');
+            if(!canvas) return;
             const link = document.createElement('a');
             link.download = 'artwork.png';
             link.href = canvas.toDataURL();
             link.click();
         });
-
-        // Function to download canvas as SVG
+        
         document.getElementById('downloadSVG').addEventListener('click', function () {
             const canvas = document.getElementById('elFrame').querySelector('canvas');
+            if(!canvas) return;
             const link = document.createElement('a');
             link.download = 'artwork.svg';
             const svgData = canvas.toDataURL("image/svg+xml");
-
+        
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
-
+        
             const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
             svg.setAttribute("width", canvasWidth);
             svg.setAttribute("height", canvasHeight);
-
+        
             const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
             img.setAttributeNS("http://www.w3.org/1999/xlink", "xlink:href", svgData);
             img.setAttribute("width", canvasWidth);
             img.setAttribute("height", canvasHeight);
-
+        
             svg.appendChild(img);
-
+        
             const serializer = new XMLSerializer();
             const svgString = serializer.serializeToString(svg);
-
+        
             const svgBlob = new Blob([svgString], { type: "image/svg+xml" });
             const svgUrl = URL.createObjectURL(svgBlob);
-
+        
             link.href = svgUrl;
             link.click();
-
+        
             URL.revokeObjectURL(svgUrl);
         });
     </script>
