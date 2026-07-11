@@ -149,6 +149,148 @@
   }
   .clear-btn:hover { color: #9B4A3F; }
 
+  .label-actions {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .label-actions .clear-btn { text-decoration: underline; text-underline-offset: 3px; }
+
+  /* video grid */
+  .video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .video-tile {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--glass-border);
+    background: #0d0c0a;
+    animation: rise 0.4s ease both;
+  }
+
+  .video-tile video,
+  .video-tile iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    object-fit: cover;
+  }
+
+  .video-caption {
+    position: absolute;
+    left: 8px;
+    right: 44px;
+    bottom: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: #fff;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .video-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.55);
+    border: none;
+    color: #fff;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    padding: 5px 9px;
+    border-radius: 8px;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .video-remove:hover { background: rgba(0,0,0,0.8); }
+
+  /* slideshow overlay */
+  .slideshow-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(20,18,15,0.94);
+    z-index: 1000;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .ss-close {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: none;
+    border: none;
+    color: var(--cream);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    cursor: pointer;
+    opacity: 0.8;
+  }
+  .ss-close:hover { opacity: 1; }
+
+  .ss-stage {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 90vw;
+    max-height: 78vh;
+    width: 100%;
+  }
+
+  .ss-stage img {
+    max-width: 100%;
+    max-height: 78vh;
+    border-radius: 12px;
+    box-shadow: 0 30px 80px -20px rgba(0,0,0,0.6);
+    object-fit: contain;
+  }
+
+  .ss-arrow {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: var(--cream);
+    font-size: 22px;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+    margin: 0 18px;
+    transition: background 0.15s ease;
+  }
+  .ss-arrow:hover { background: rgba(255,255,255,0.22); }
+
+  .ss-footer {
+    margin-top: 22px;
+    text-align: center;
+  }
+
+  .ss-caption {
+    font-family: 'Archivo', sans-serif;
+    font-size: 14px;
+    color: var(--cream);
+    margin-bottom: 6px;
+  }
+
+  .ss-counter {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: rgba(243,239,231,0.6);
+  }
+
   /* tile grid */
   .log-grid {
     display: grid;
@@ -443,13 +585,13 @@
   <header>
     <div class="eyebrow">link capture</div>
     <h1>cocklock</h1>
-    <div class="sub">paste a link, pull its image, keep the log. hover a tile to flip it. everything persists right here in your browser.</div>
+    <div class="sub">paste a link, pull its image, keep the log. paste a video link and it lands in the videos section instead. hover a tile to flip it. everything persists right here in your browser.</div>
     <div class="sync-line"><span id="syncStatus">local only</span> · <a id="reconnectLink">connect github</a></div>
   </header>
 
   <div class="capture-card">
     <div class="capture-row">
-      <input type="text" id="urlInput" placeholder="paste a link here..." autocomplete="off" spellcheck="false">
+      <input type="text" id="urlInput" placeholder="paste a link or video..." autocomplete="off" spellcheck="false">
       <button class="capture-btn" id="captureBtn">capture</button>
     </div>
     <div class="status" id="status"></div>
@@ -457,11 +599,34 @@
 
   <div class="section-label">
     <span id="countLabel">log</span>
-    <button class="clear-btn" id="clearBtn">clear all</button>
+    <div class="label-actions">
+      <button class="clear-btn" id="slideshowBtn">slideshow</button>
+      <button class="clear-btn" id="clearBtn">clear all</button>
+    </div>
   </div>
 
   <div class="log-grid" id="logGrid"></div>
 
+  <div class="section-label" style="margin-top:44px;">
+    <span id="videoCountLabel">videos</span>
+    <button class="clear-btn" id="clearVideosBtn">clear all</button>
+  </div>
+
+  <div class="video-grid" id="videoGrid"></div>
+
+</div>
+
+<div class="slideshow-overlay" id="slideshowOverlay">
+  <button class="ss-close" id="ssClose">close ✕</button>
+  <div class="ss-stage">
+    <button class="ss-arrow ss-prev" id="ssPrev">‹</button>
+    <img id="ssImage" src="" alt="">
+    <button class="ss-arrow ss-next" id="ssNext">›</button>
+  </div>
+  <div class="ss-footer">
+    <div class="ss-caption" id="ssCaption"></div>
+    <div class="ss-counter" id="ssCounter"></div>
+  </div>
 </div>
 
 <input type="file" id="fileInput" accept="image/*" style="display:none">
@@ -486,6 +651,7 @@
   const SYNC_SKIPPED_KEY = 'cocklock:sync-skipped';
   const GIST_DESC = 'cocklock-sync-data (do not delete)';
   const GIST_FILENAME = 'cocklock-data.json';
+  const GIST_FILENAME_VIDEOS = 'cocklock-videos.json';
 
   let ghToken = null;
   try { ghToken = localStorage.getItem(GH_TOKEN_KEY); } catch {}
@@ -525,7 +691,10 @@
       body: JSON.stringify({
         description: GIST_DESC,
         public: false,
-        files: { [GIST_FILENAME]: { content: '[]' } }
+        files: {
+          [GIST_FILENAME]: { content: '[]' },
+          [GIST_FILENAME_VIDEOS]: { content: '[]' }
+        }
       })
     });
     if (!createRes.ok) throw new Error('could not create sync gist');
@@ -539,16 +708,25 @@
     const res = await fetch(`https://api.github.com/gists/${gistId}`, { headers: ghHeaders() });
     if (!res.ok) throw new Error('gist fetch failed');
     const data = await res.json();
-    const file = data.files[GIST_FILENAME];
-    return file && file.content ? JSON.parse(file.content) : [];
+    const linksFile = data.files[GIST_FILENAME];
+    const videosFile = data.files[GIST_FILENAME_VIDEOS];
+    return {
+      entries: linksFile && linksFile.content ? JSON.parse(linksFile.content) : [],
+      videos: videosFile && videosFile.content ? JSON.parse(videosFile.content) : []
+    };
   }
 
-  async function pushToGist(data) {
+  async function pushToGist(entriesData, videosData) {
     const gistId = await findOrCreateGist();
     const res = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: 'PATCH',
       headers: ghHeaders(),
-      body: JSON.stringify({ files: { [GIST_FILENAME]: { content: JSON.stringify(data) } } })
+      body: JSON.stringify({
+        files: {
+          [GIST_FILENAME]: { content: JSON.stringify(entriesData) },
+          [GIST_FILENAME_VIDEOS]: { content: JSON.stringify(videosData) }
+        }
+      })
     });
     if (!res.ok) throw new Error('gist push failed');
   }
@@ -563,7 +741,7 @@
   function proceedPastGate() {
     gate.style.display = 'none';
     mainWrap.style.display = 'block';
-    loadEntries();
+    loadAll();
   }
 
   function unlock() {
@@ -637,9 +815,24 @@
   const logGrid = document.getElementById('logGrid');
   const clearBtn = document.getElementById('clearBtn');
   const countLabel = document.getElementById('countLabel');
+  const slideshowBtn = document.getElementById('slideshowBtn');
+
+  const videoGrid = document.getElementById('videoGrid');
+  const clearVideosBtn = document.getElementById('clearVideosBtn');
+  const videoCountLabel = document.getElementById('videoCountLabel');
+
+  const slideshowOverlay = document.getElementById('slideshowOverlay');
+  const ssImage = document.getElementById('ssImage');
+  const ssCaption = document.getElementById('ssCaption');
+  const ssCounter = document.getElementById('ssCounter');
+  const ssClose = document.getElementById('ssClose');
+  const ssPrev = document.getElementById('ssPrev');
+  const ssNext = document.getElementById('ssNext');
 
   const STORAGE_KEY = 'cocklock:entries';
+  const VIDEOS_KEY = 'cocklock:videos';
   let entries = [];
+  let videos = [];
 
   function normalizeUrl(raw) {
     let u = raw.trim();
@@ -664,14 +857,11 @@
     status.classList.toggle('err', !!isErr);
   }
 
-  function loadEntries() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      entries = raw ? JSON.parse(raw) : [];
-    } catch {
-      entries = [];
-    }
+  function loadAll() {
+    try { entries = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); } catch { entries = []; }
+    try { videos = JSON.parse(localStorage.getItem(VIDEOS_KEY) || '[]'); } catch { videos = []; }
     render();
+    renderVideos();
 
     if (!ghToken) {
       setSyncStatus('local only');
@@ -680,9 +870,14 @@
     }
     setSyncStatus('syncing...');
     pullFromGist().then(remote => {
-      entries = remote;
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch {}
+      entries = remote.entries;
+      videos = remote.videos;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+        localStorage.setItem(VIDEOS_KEY, JSON.stringify(videos));
+      } catch {}
       render();
+      renderVideos();
       setSyncStatus('synced via github');
       reconnectLink.textContent = 'change token';
     }).catch(e => {
@@ -692,20 +887,33 @@
     });
   }
 
+  function syncPush() {
+    if (!ghToken) return;
+    setSyncStatus('syncing...');
+    pushToGist(entries, videos).then(() => {
+      setSyncStatus('synced via github');
+    }).catch(e => {
+      console.error('gist push failed', e);
+      setSyncStatus('sync failed', true);
+    });
+  }
+
   function saveEntries() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
     } catch (e) {
       console.error('save failed', e);
     }
-    if (!ghToken) return;
-    setSyncStatus('syncing...');
-    pushToGist(entries).then(() => {
-      setSyncStatus('synced via github');
-    }).catch(e => {
-      console.error('gist push failed', e);
-      setSyncStatus('sync failed', true);
-    });
+    syncPush();
+  }
+
+  function saveVideos() {
+    try {
+      localStorage.setItem(VIDEOS_KEY, JSON.stringify(videos));
+    } catch (e) {
+      console.error('save failed', e);
+    }
+    syncPush();
   }
 
   function escapeHtml(str) {
@@ -750,6 +958,114 @@
       </div>
     `).join('');
   }
+
+  function parseVideoUrl(u) {
+    const yt = u.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{6,})/);
+    if (yt) return { kind: 'youtube', refId: yt[1], url: u };
+    const vim = u.match(/vimeo\.com\/(\d+)/);
+    if (vim) return { kind: 'vimeo', refId: vim[1], url: u };
+    if (/\.(mp4|webm|mov|m4v|ogv|ogg)(\?.*)?$/i.test(u)) return { kind: 'direct', refId: null, url: u };
+    return null;
+  }
+
+  function renderVideos() {
+    videoCountLabel.textContent = videos.length ? `videos · ${videos.length}` : 'videos';
+    if (!videos.length) {
+      videoGrid.innerHTML = '<div class="empty">no videos yet. paste a link above.</div>';
+      return;
+    }
+    videoGrid.innerHTML = videos.map(v => {
+      let embed;
+      if (v.kind === 'youtube') {
+        embed = `<iframe src="https://www.youtube.com/embed/${v.refId}?autoplay=1&mute=1&loop=1&playlist=${v.refId}&playsinline=1&controls=1" allow="autoplay; encrypted-media" allowfullscreen loading="lazy"></iframe>`;
+      } else if (v.kind === 'vimeo') {
+        embed = `<iframe src="https://player.vimeo.com/video/${v.refId}?autoplay=1&muted=1&loop=1" allow="autoplay; fullscreen" allowfullscreen loading="lazy"></iframe>`;
+      } else {
+        embed = `<video src="${v.url}" autoplay muted loop playsinline controls></video>`;
+      }
+      return `
+        <div class="video-tile" data-id="${v.localId}">
+          ${embed}
+          <button class="video-remove" onclick="removeVideo('${v.localId}')">remove</button>
+          <div class="video-caption">${escapeHtml(domainOf(v.url))}</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.removeVideo = function(localId) {
+    videos = videos.filter(v => v.localId !== localId);
+    renderVideos();
+    saveVideos();
+  };
+
+  clearVideosBtn.addEventListener('click', () => {
+    if (!videos.length) return;
+    if (!confirm("clear all videos? this can't be undone.")) return;
+    videos = [];
+    renderVideos();
+    saveVideos();
+  });
+
+  /* slideshow */
+  let ssImages = [];
+  let ssIndex = 0;
+  let ssTimer = null;
+
+  function renderSlide() {
+    const e = ssImages[ssIndex];
+    ssImage.src = e.image;
+    ssCaption.textContent = e.title || e.domain;
+    ssCounter.textContent = `${ssIndex + 1} / ${ssImages.length}`;
+  }
+
+  function startSSTimer() {
+    clearInterval(ssTimer);
+    ssTimer = setInterval(() => {
+      ssIndex = (ssIndex + 1) % ssImages.length;
+      renderSlide();
+    }, 4000);
+  }
+
+  function openSlideshow() {
+    ssImages = entries.filter(e => e.image);
+    if (!ssImages.length) {
+      setStatus('no images captured yet to show', true);
+      setTimeout(() => setStatus(''), 2000);
+      return;
+    }
+    ssIndex = 0;
+    renderSlide();
+    slideshowOverlay.style.display = 'flex';
+    startSSTimer();
+  }
+
+  function closeSlideshow() {
+    clearInterval(ssTimer);
+    slideshowOverlay.style.display = 'none';
+  }
+
+  slideshowBtn.addEventListener('click', openSlideshow);
+  ssClose.addEventListener('click', closeSlideshow);
+  ssPrev.addEventListener('click', () => {
+    ssIndex = (ssIndex - 1 + ssImages.length) % ssImages.length;
+    renderSlide();
+    startSSTimer();
+  });
+  ssNext.addEventListener('click', () => {
+    ssIndex = (ssIndex + 1) % ssImages.length;
+    renderSlide();
+    startSSTimer();
+  });
+  slideshowOverlay.addEventListener('click', (e) => {
+    if (e.target === slideshowOverlay) closeSlideshow();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (slideshowOverlay.style.display !== 'flex') return;
+    if (e.key === 'Escape') closeSlideshow();
+    if (e.key === 'ArrowLeft') ssPrev.click();
+    if (e.key === 'ArrowRight') ssNext.click();
+  });
 
   window.handleImgLoad = function(img, id) {
     const w = img.naturalWidth, h = img.naturalHeight;
@@ -814,6 +1130,24 @@
       setStatus("that doesn't look like a valid link", true);
       return;
     }
+
+    const videoMeta = parseVideoUrl(url);
+    if (videoMeta) {
+      videos.unshift({
+        localId: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        url: videoMeta.url,
+        kind: videoMeta.kind,
+        refId: videoMeta.refId,
+        timestamp: Date.now()
+      });
+      renderVideos();
+      saveVideos();
+      input.value = '';
+      setStatus('added to videos');
+      setTimeout(() => setStatus(''), 2200);
+      return;
+    }
+
     btn.disabled = true;
     setStatus('fetching...');
     let image = null, title = null;
